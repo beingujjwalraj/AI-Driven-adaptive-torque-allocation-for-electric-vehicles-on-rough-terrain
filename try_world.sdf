@@ -1,0 +1,144 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <physics name="1ms" type="ignored">
+    <max_step_size>0.001</max_step_size>
+    <real_time_factor>1.0</real_time_factor>
+  </physics>
+    <plugin
+        filename="gz-sim-physics-system"
+        name="gz::sim::systems::Physics">
+    </plugin>
+    <plugin
+        filename="gz-sim-user-commands-system"
+        name="gz::sim::systems::UserCommands">
+    </plugin>
+    <plugin
+        filename="gz-sim-scene-broadcaster-system"
+        name="gz::sim::systems::SceneBroadcaster">
+    </plugin>
+  <world name="rough_terrain_world">
+
+
+    <!-- Include the terrain model -->
+    <include>
+      <uri>model.sdf</uri>
+    </include>
+
+    <!-- Include the vehicle model -->
+    <include>
+      <uri>Evata/model.sdf</uri>
+      <pose>0 0 3 0 0 0</pose> <!-- Position the vehicle above the terrain -->
+
+      <plugin
+            filename="gz-sim-imu-system"
+            name="gz::sim::systems::Imu">
+      </plugin>
+      <plugin
+            filename="gz-sim-sensors-system"
+            name="gz::sim::systems::Sensors">
+            <render_engine>ogre2</render_engine>
+      </plugin>
+      <!-- <plugin
+            filename="gz-sim-contact-system"
+            name="gz::sim::systems::Contact">
+      </plugin> -->
+
+      <!-- IMU sensor -->
+      <link name="chassis">
+        <sensor name="imu_sensor" type="imu">
+          <always_on>1</always_on>
+          <update_rate>1</update_rate>
+          <visualize>true</visualize>
+          <topic>imu</topic>
+        </sensor>
+      </link>
+
+      <!-- Differential drive plugin -->
+      <plugin
+          filename="gz-sim-diff-drive-system"
+          name="gz::sim::systems::DiffDrive">
+        <left_joint>left_wheel_joint</left_joint>
+        <right_joint>right_wheel_joint</right_joint>
+        <wheel_separation>1.2</wheel_separation>
+        <wheel_radius>0.4</wheel_radius>
+        <odom_publish_frequency>1</odom_publish_frequency>
+        <topic>cmd_vel</topic>
+      </plugin>
+
+      <!-- Movement controls -->
+      <!-- Move Left -->
+      <plugin filename="gz-sim-triggered-publisher-system"
+              name="gz::sim::systems::TriggeredPublisher">
+        <input type="gz.msgs.Int32" topic="/keyboard/keypress">
+          <match field="data">16777234</match>
+        </input>
+        <output type="gz.msgs.Twist" topic="/cmd_vel">
+          linear: {x: 1.5}, angular: {z: 1.5}
+        </output>
+      </plugin>
+
+      <!-- Move Forward -->
+      <plugin filename="gz-sim-triggered-publisher-system"
+              name="gz::sim::systems::TriggeredPublisher">
+        <input type="gz.msgs.Int32" topic="/keyboard/keypress">
+          <match field="data">16777235</match>
+        </input>
+        <output type="gz.msgs.Twist" topic="/cmd_vel">
+          linear: {x: 1.5}, angular: {z: 0.0}
+        </output>
+      </plugin>
+
+      <!-- Move Right -->
+      <plugin filename="gz-sim-triggered-publisher-system"
+              name="gz::sim::systems::TriggeredPublisher">
+        <input type="gz.msgs.Int32" topic="/keyboard/keypress">
+          <match field="data">16777236</match>
+        </input>
+        <output type="gz.msgs.Twist" topic="/cmd_vel">
+          linear: {x: 1.5}, angular: {z: -1.5}
+        </output>
+      </plugin>
+
+      <!-- Move Backward -->
+      <plugin filename="gz-sim-triggered-publisher-system"
+              name="gz::sim::systems::TriggeredPublisher">
+        <input type="gz.msgs.Int32" topic="/keyboard/keypress">
+          <match field="data">16777237</match>
+        </input>
+        <output type="gz.msgs.Twist" topic="/cmd_vel">
+          linear: {x: -1.5}, angular: {z: 0.0}
+        </output>
+      </plugin>
+      
+      <!-- <plugin
+          filename="libignition-gazebo-ros2-control-system.so"
+          name="ignition::gazebo::systems::Ros2Control">
+        <ros>
+          <namespace>/imu</namespace>
+          <remapping>topic@/imu</remapping>
+        </ros>
+      </plugin> -->
+      <!-- Stop on collision -->
+      <!-- <plugin filename="gz-sim-triggered-publisher-system"
+              name="gz::sim::systems::TriggeredPublisher">
+        <input type="gz.msgs.Boolean" topic="/wall/touched">
+          <match>data: true</match>
+        </input>
+        <output type="gz.msgs.Twist" topic="/cmd_vel">
+          linear: {x: 0.0}, angular: {z: 0.0}
+        </output>
+      </plugin> -->
+    </include>
+    
+    <!-- Physics settings -->
+    <physics name="default_physics" type="ode">
+      <gravity>0 0 -9.8</gravity>
+    </physics>
+    
+    <!-- GUI settings -->
+    <gui/>
+    <plugin filename="KeyPublisher" name="Key Publisher"/>
+  </world>
+</sdf>
+
+<!-- command to activate imu sensor gz topic -e -t /imu -->

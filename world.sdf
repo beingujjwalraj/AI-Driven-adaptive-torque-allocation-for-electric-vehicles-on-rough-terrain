@@ -1,0 +1,16 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <world name="rough_terrain_world">
+    <include>
+      <uri>model.sdf</uri> <!--Terrain Model -->
+    </include>
+    <include>
+      <uri>Evata/model.sdf</uri> <!-- Vehicle Model -->
+      <pose>0 0 100 0 0 0</pose> <!-- Position the vehicle above the terrain -->
+    </include>
+    <physics name="default_physics" type="ode">
+      <gravity>0 0 -9.8</gravity>
+    </physics>
+    <gui/>
+  </world>
+</sdf>
