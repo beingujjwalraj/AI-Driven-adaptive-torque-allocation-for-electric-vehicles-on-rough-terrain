@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Car Controller</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+        }
+
+        body {
+            background: var(--light);
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .control-panel {
+            background: var(--primary);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+        }
+
+        .joystick {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        button {
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            opacity: 0.9;
+        }
+
+        .btn-primary { background: var(--secondary); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+
+        .ai-toggle {
+            background: var(--success);
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 20px 0;
+            transition: all 0.3s;
+        }
+
+        .ai-toggle.inactive {
+            background: var(--danger);
+        }
+
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .sensor-data h4 {
+            margin: 15px 0 10px 0;
+            color: #3498db;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        .sensor-data p {
+            margin: 5px 0;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Car Controller</h1>
+        
+        <div class="dashboard">
+            <div class="chart-container">
+                <canvas id="stabilityChart"></canvas>
+            </div>
+            
+            <div class="control-panel">
+                <div class="ai-toggle" id="aiToggle" onclick="toggleAI()">
+                    AI Stability Control: OFF
+                </div>
+
+                <div class="joystick">
+                    <button class="btn-primary" onclick="moveCar('forward')">↑ Forward</button>
+                    <button class="btn-danger" onclick="moveCar('stop')">⏹ Stop</button>
+                    <button class="btn-primary" onclick="moveCar('left')">← Left</button>
+                    <button class="btn-primary" onclick="moveCar('right')">→ Right</button>
+                    <button class="btn-primary" onclick="moveCar('backward')">↓ Backward</button>
+                </div>
+
+                <div class="sensor-data">
+                    <h3>Real-time Sensor Data</h3>
+                    <p>Acceleration X: <span id="ax">0</span> g</p>
+                    <p>Acceleration Y: <span id="ay">0</span> g</p>
+                    <p>Gyro X: <span id="gx">0</span> °/s</p>
+                    <p>Gyro Y: <span id="gy">0</span> °/s</p>
+                    
+                    <h4>Torque Distribution</h4>
+                    <p>Front Left: <span id="tfl">0</span></p>
+                    <p>Front Right: <span id="tfr">0</span></p>
+                    <p>Rear Left: <span id="trl">0</span></p>
+                    <p>Rear Right: <span id="trr">0</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chart;
+        const ctx = document.getElementById('stabilityChart').getContext('2d');
+        
+        // Initialize Chart
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Gyro X',
+                    data: [],
+                    borderColor: '#e74c3c',
+                    tension: 0.4
+                }, {
+                    label: 'Gyro Y',
+                    data: [],
+                    borderColor: '#3498db',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Real-time Stability Monitoring'
+                    }
+                },
+                scales: {
+                    y: {
+                        title: { text: 'Angular Velocity (°/s)', display: true }
+                    }
+                }
+            }
+        });
+
+        // Update data every 100ms
+        function updateData() {
+            fetch('/sensor_data')
+                .then(r => r.json())
+                .then(data => {
+                    // Update sensor values
+                    document.getElementById('ax').textContent = data.sensors.ax;
+                    document.getElementById('ay').textContent = data.sensors.ay;
+                    document.getElementById('gx').textContent = data.sensors.gx;
+                    document.getElementById('gy').textContent = data.sensors.gy;
+
+                    // Update torque distribution
+                    if(data.sensors.torque) {
+                        document.getElementById('tfl').textContent = data.sensors.torque[0].toFixed(2);
+                        document.getElementById('tfr').textContent = data.sensors.torque[1].toFixed(2);
+                        document.getElementById('trl').textContent = data.sensors.torque[2].toFixed(2);
+                        document.getElementById('trr').textContent = data.sensors.torque[3].toFixed(2);
+                    }
+
+                    // Update chart
+                    chart.data.labels = data.plot_data.timestamps;
+                    chart.data.datasets[0].data = data.plot_data.gx;
+                    chart.data.datasets[1].data = data.plot_data.gy;
+                    chart.update();
+                });
+            setTimeout(updateData, 100);
+        }
+
+        function moveCar(direction) {
+            fetch('/move', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({direction: direction, speed: 50})
+            });
+        }
+
+        function toggleAI() {
+            fetch('/toggle_ai', {method: 'POST'})
+                .then(r => r.json())
+                .then(data => {
+                    const toggle = document.getElementById('aiToggle');
+                    toggle.textContent = `AI Stability Control: ${data.ai_active ? 'ON' : 'OFF'}`;
+                    toggle.classList.toggle('inactive', !data.ai_active);
+                });
+        }
+
+        // Start data updates
+        updateData();
+    </script>
+</body>
+</html>
